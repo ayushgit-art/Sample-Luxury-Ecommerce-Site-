@@ -1,0 +1,48 @@
+<%- include('partials/header', { title }) %>
+<main class="cart-page container-fluid" data-cart-page>
+  <header class="cart-heading">
+    <p class="eyebrow">Maison Atelier · Your selection</p>
+    <h1>Your bag</h1>
+    <p><span data-cart-item-count><%= cartCount %></span> pieces selected</p>
+  </header>
+  <% if (cartItems.length) { %>
+    <div class="cart-layout">
+      <section class="cart-items" aria-label="Items in your bag">
+        <% cartItems.forEach((item) => { const unitPrice = item.product.discountPrice || item.product.price; %>
+          <article class="cart-line" data-cart-line data-item-id="<%= item._id %>" data-unit-price="<%= unitPrice %>">
+            <a class="cart-line-image" href="/products/<%= item.product.slug %>"><img src="<%= item.product.images[0] %>" alt="<%= item.product.name %>"></a>
+            <div class="cart-line-details">
+              <p class="product-category"><%= item.product.category %></p>
+              <h2><a href="/products/<%= item.product.slug %>"><%= item.product.name %></a></h2>
+              <% if (item.color) { %><p class="cart-line-option">Colour · <%= item.color %></p><% } %>
+              <% if (item.size) { %><p class="cart-line-option">Size · <%= item.size %></p><% } %>
+              <p class="cart-line-stock"><%= item.product.stock <= 3 ? `Only ${item.product.stock} left` : 'Available' %></p>
+              <button class="cart-remove" type="button" data-cart-remove aria-label="Remove <%= item.product.name %> from bag">Remove</button>
+            </div>
+            <div class="cart-line-end">
+              <div class="cart-quantity" aria-label="Quantity for <%= item.product.name %>">
+                <button type="button" data-cart-quantity-step="-1" aria-label="Decrease quantity" <%= item.quantity <= 1 ? 'disabled' : '' %>>−</button>
+                <input type="number" value="<%= item.quantity %>" min="1" max="<%= item.product.stock %>" data-cart-quantity aria-label="Quantity">
+                <button type="button" data-cart-quantity-step="1" aria-label="Increase quantity" <%= item.quantity >= item.product.stock ? 'disabled' : '' %>>+</button>
+              </div>
+              <span class="cart-line-total" data-line-total>€<%= formatPrice(unitPrice * item.quantity) %></span>
+            </div>
+          </article>
+        <% }) %>
+        <button class="cart-clear" type="button" data-cart-clear>Clear bag</button>
+      </section>
+      <aside class="cart-summary" aria-label="Bag summary">
+        <p class="eyebrow">Summary</p>
+        <div class="cart-summary-row"><span>Subtotal</span><strong data-cart-subtotal>€<%= formatPrice(subtotal) %></strong></div>
+        <div class="cart-summary-row"><span>Delivery</span><span>Calculated at a later stage</span></div>
+        <div class="cart-summary-total"><span>Total</span><strong data-cart-total>€<%= formatPrice(subtotal) %></strong></div>
+        <p class="cart-summary-note">Shipping and estimated tax are calculated at checkout.</p>
+        <a class="place-order-button cart-checkout-button" href="/checkout">Continue to checkout <i class="bi bi-arrow-right"></i></a>
+        <a class="text-cta dark-cta cart-continue" href="/products">Continue exploring <i class="bi bi-arrow-right"></i></a>
+      </aside>
+    </div>
+  <% } else { %>
+    <div class="cart-empty"><p>Your bag is taking a quiet moment.</p><a class="text-cta dark-cta" href="/products">Explore the collection <i class="bi bi-arrow-right"></i></a></div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

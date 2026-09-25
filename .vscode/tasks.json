@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Seed MongoDB catalog",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"seed"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Cleanup auth verification account",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/cleanupAuthTest.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

@@ -1,0 +1,35 @@
+<%- include('partials/header', { title }) %>
+<main class="order-detail-page container-fluid">
+  <% if (confirmation) { %><section class="order-confirmation-banner"><p class="eyebrow">Order received</p><h2>Thank you for your order.</h2><p>Your order is recorded with mock payment pending. No payment was collected.</p></section><% } %>
+    <nav class="breadcrumbs container-fluid" aria-label="Breadcrumb"><a href="<%= isAdminView ? '/admin' : '/account' %>"><%= isAdminView ? 'Administration' : 'Account' %></a><i class="bi bi-chevron-right"></i><a href="<%= isAdminView ? '/admin/orders' : '/orders' %>">Orders</a><i class="bi bi-chevron-right"></i><span>Order #<%= String(order._id).slice(-8).toUpperCase() %></span></nav>
+  <header class="order-detail-heading">
+    <p class="eyebrow">Placed <%= new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></p>
+    <div><h1>Order #<%= String(order._id).slice(-8).toUpperCase() %></h1><span class="order-status-badge status-<%= order.orderStatus %>"><%= order.orderStatus %></span></div>
+    <p>Payment · <%= order.paymentStatus %></p>
+      <% if (isAdminView) { %><div class="admin-order-controls"><p>Customer · <%= order.user ? `${order.user.name} · ${order.user.email}` : (order.contactEmail || 'Account removed') %></p><form action="/admin/orders/<%= order._id %>/status" method="post"><label for="adminOrderStatus">Order status</label><select id="adminOrderStatus" name="orderStatus"><% ['pending', 'processing', 'shipped', 'delivered', 'cancelled'].forEach((status) => { %><option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option><% }) %></select><button type="submit">Update status</button></form></div><% } %>
+  </header>
+  <div class="order-detail-layout">
+    <section class="order-detail-items" aria-label="Products in this order">
+      <% order.items.forEach((item) => { %>
+        <article class="order-item-row">
+          <a class="order-item-image" href="/products/<%= item.slug || '#' %>"><% if (item.image) { %><img src="<%= item.image %>" alt="<%= item.name %>" loading="lazy"><% } else { %><span class="order-image-placeholder"></span><% } %></a>
+          <div class="order-item-copy"><p class="product-category"><%= item.category || 'Maison Atelier' %></p><h2><%= item.name %></h2><% if (item.color) { %><p>Colour · <%= item.color %></p><% } %><% if (item.size) { %><p>Size · <%= item.size %></p><% } %><p>Quantity · <%= item.quantity %></p></div>
+          <strong class="order-item-price">€<%= formatPrice(item.unitPrice * item.quantity) %></strong>
+        </article>
+      <% }) %>
+      <div class="order-totals">
+        <div><span>Subtotal</span><span>€<%= formatPrice(order.subtotal) %></span></div>
+        <div><span>Shipping</span><span>€<%= formatPrice(order.shippingCost) %></span></div>
+        <div><span>Tax</span><span>€<%= formatPrice(order.tax) %></span></div>
+        <div class="order-grand-total"><strong>Total</strong><strong>€<%= formatPrice(order.total) %></strong></div>
+      </div>
+    </section>
+    <aside class="order-shipping-address">
+      <p class="eyebrow">Delivery details</p>
+      <h2>Shipping address</h2>
+      <address><strong><%= order.shippingAddress.recipientName %></strong><br><%= order.shippingAddress.addressLine1 %><% if (order.shippingAddress.addressLine2) { %><br><%= order.shippingAddress.addressLine2 %><% } %><br><%= order.shippingAddress.city %><% if (order.shippingAddress.region) { %>, <%= order.shippingAddress.region %><% } %><br><%= order.shippingAddress.postalCode %><br><%= order.shippingAddress.country %><% if (order.shippingAddress.phone) { %><br><%= order.shippingAddress.phone %><% } %></address>
+      <a href="/orders" class="account-return-link"><i class="bi bi-arrow-left"></i> All orders</a>
+    </aside>
+  </div>
+</main>
+<%- include('partials/footer') %>

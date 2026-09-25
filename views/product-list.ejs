@@ -1,0 +1,67 @@
+<%- include('partials/header', { title }) %>
+<main class="collection-page">
+  <header class="collection-intro container-fluid">
+    <p class="eyebrow">Maison Atelier · Collection 04</p>
+    <h1>The collection</h1>
+    <p>Considered pieces for a life well lived.</p>
+  </header>
+  <div class="collection-layout container-fluid">
+    <aside class="collection-filters" aria-label="Product filters">
+      <form action="/products" method="get" class="filter-form">
+        <label class="filter-label" for="searchProducts">Search the collection</label>
+        <div class="search-control"><input id="searchProducts" name="q" type="search" value="<%= filters.q || '' %>" placeholder="A piece, a material..."><button type="submit" aria-label="Search"><i class="bi bi-search"></i></button></div>
+        <div class="filter-group">
+          <label class="filter-label" for="categoryFilter">Category</label>
+          <select id="categoryFilter" name="category"><option value="">All pieces</option><% categories.forEach((category) => { %><option value="<%= category %>" <%= filters.category === category ? 'selected' : '' %>><%= category %></option><% }) %></select>
+        </div>
+        <div class="filter-group">
+          <p class="filter-label">Price (€)</p>
+          <div class="price-fields"><label><span class="visually-hidden">Minimum price</span><input type="number" min="0" name="minPrice" placeholder="Min" value="<%= filters.minPrice || '' %>"></label><span>to</span><label><span class="visually-hidden">Maximum price</span><input type="number" min="0" name="maxPrice" placeholder="Max" value="<%= filters.maxPrice || '' %>"></label></div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="sizeFilter">Size</label>
+          <select id="sizeFilter" name="size"><option value="">All sizes</option><% sizes.forEach((size) => { %><option value="<%= size %>" <%= filters.size === size ? 'selected' : '' %>><%= size %></option><% }) %></select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="colorFilter">Color</label>
+          <select id="colorFilter" name="color"><option value="">All colors</option><% colors.forEach((color) => { %><option value="<%= color %>" <%= filters.color === color ? 'selected' : '' %>><%= color %></option><% }) %></select>
+        </div>
+        <input type="hidden" name="sort" value="<%= sortName %>">
+        <button class="filter-submit" type="submit">Apply selection <i class="bi bi-arrow-right"></i></button>
+        <a class="filter-reset" href="/products">Clear filters</a>
+      </form>
+    </aside>
+
+    <section class="collection-results" aria-label="Products">
+      <div class="collection-toolbar">
+        <span class="results-count"><%= total %> pieces</span>
+        <form action="/products" method="get" class="sort-form">
+          <% Object.entries(filters).forEach(([key, value]) => { if (key !== 'sort' && key !== 'page' && value) { %><input type="hidden" name="<%= key %>" value="<%= value %>"><% } }) %>
+          <label for="sortProducts">Sort by</label>
+          <select id="sortProducts" name="sort" onchange="this.form.submit()">
+            <option value="newest" <%= sortName === 'newest' ? 'selected' : '' %>>Newest</option>
+            <option value="popularity" <%= sortName === 'popularity' ? 'selected' : '' %>>Most loved</option>
+            <option value="price-asc" <%= sortName === 'price-asc' ? 'selected' : '' %>>Price: low to high</option>
+            <option value="price-desc" <%= sortName === 'price-desc' ? 'selected' : '' %>>Price: high to low</option>
+          </select>
+        </form>
+      </div>
+      <% if (products.length) { %>
+        <div class="row product-grid collection-product-grid g-3 g-lg-4">
+          <% products.forEach((product) => { %><div class="col-6 col-md-4 col-xl-3" data-reveal><%- include('partials/product-card', { product }) %></div><% }) %>
+        </div>
+        <% if (pageCount > 1) { %>
+          <nav class="collection-pagination" aria-label="Collection pages">
+            <% if (currentPage > 1) { %><a href="/products?<%= queryString %><%= queryString ? '&' : '' %>page=<%= currentPage - 1 %>" aria-label="Previous page"><i class="bi bi-arrow-left"></i></a><% } %>
+            <span><%= String(currentPage).padStart(2, '0') %><span class="pagination-divider">/</span><%= String(pageCount).padStart(2, '0') %></span>
+            <% if (currentPage < pageCount) { %><a href="/products?<%= queryString %><%= queryString ? '&' : '' %>page=<%= currentPage + 1 %>" aria-label="Next page"><i class="bi bi-arrow-right"></i></a><% } %>
+          </nav>
+        <% } %>
+      <% } else { %>
+        <div class="collection-empty"><p>No pieces match this selection.</p><a href="/products">Clear filters <i class="bi bi-arrow-right"></i></a></div>
+      <% } %>
+    </section>
+  </div>
+</main>
+<%- include('partials/quick-view-modal') %>
+<%- include('partials/footer') %>

@@ -1,0 +1,53 @@
+<%- include('partials/header', { title }) %>
+<main class="product-detail-page">
+  <nav class="breadcrumbs container-fluid" aria-label="Breadcrumb"><a href="/">Home</a><i class="bi bi-chevron-right"></i><a href="/products">Collection</a><i class="bi bi-chevron-right"></i><span><%= product.name %></span></nav>
+  <section class="product-detail container-fluid">
+    <div class="product-gallery">
+      <div class="product-main-image" data-product-zoom><img id="mainProductImage" src="<%= product.images[0] %>" alt="<%= product.name %>"></div>
+      <% if (product.images.length > 1) { %>
+        <div class="product-thumbnails" aria-label="Product images">
+          <% product.images.forEach((image, index) => { %><button class="product-thumbnail <%= index === 0 ? 'is-active' : '' %>" type="button" data-product-image="<%= image %>" aria-label="View image <%= index + 1 %>" aria-pressed="<%= index === 0 %>"><img src="<%= image %>" alt="" loading="lazy"></button><% }) %>
+        </div>
+      <% } %>
+    </div>
+    <div class="product-purchase-panel">
+      <p class="eyebrow"><%= product.brand %> · <%= product.category %></p>
+      <h1><%= product.name %></h1>
+      <p class="detail-price"><% if (product.discountPrice) { %><del>€<%= product.price.toLocaleString('en-US') %></del> €<%= product.discountPrice.toLocaleString('en-US') %><% } else { %>€<%= product.price.toLocaleString('en-US') %><% } %></p>
+      <p class="detail-description"><%= product.description %></p>
+      <p class="stock-status <%= product.stock <= 3 ? 'stock-low' : '' %>"><i class="bi bi-circle-fill"></i> <% if (product.stock === 0) { %>Currently unavailable<% } else if (product.stock <= 3) { %>Only <%= product.stock %> left<% } else { %>In stock · Ready to dispatch<% } %></p>
+      <form class="product-purchase-form">
+        <fieldset class="option-group">
+          <legend>Colour <span data-selected-color><%= product.colors[0] || 'Selected' %></span></legend>
+          <div class="color-options"><% product.colors.forEach((color, index) => { %><button class="color-option <%= index === 0 ? 'is-selected' : '' %>" type="button" data-select-color="<%= color %>" aria-label="<%= color %>" aria-pressed="<%= index === 0 %>"><span class="color-dot color-<%= color.toLowerCase().replace(/[^a-z]+/g, '-') %>"></span></button><% }) %></div>
+        </fieldset>
+        <fieldset class="option-group size-option-group">
+          <div class="option-heading"><legend>Size</legend><button type="button" class="size-guide-link" data-bs-toggle="modal" data-bs-target="#sizeGuideModal">Size guide <i class="bi bi-arrow-up-right"></i></button></div>
+          <div class="size-options"><% product.sizes.forEach((size, index) => { %><label class="size-option"><input type="radio" name="size" value="<%= size %>" <%= index === 0 ? 'checked' : '' %> <%= product.stock === 0 ? 'disabled' : '' %>><span><%= size %></span></label><% }) %></div>
+        </fieldset>
+        <div class="purchase-controls">
+          <div class="quantity-control" aria-label="Quantity">
+            <button type="button" data-quantity-step="-1" aria-label="Decrease quantity">−</button><input type="number" value="1" min="1" max="<%= Math.max(product.stock, 1) %>" aria-label="Quantity" data-quantity><button type="button" data-quantity-step="1" aria-label="Increase quantity">+</button>
+          </div>
+          <button class="add-to-bag-button" type="button" data-add-to-cart="<%= product.slug %>" <%= product.stock === 0 ? 'disabled' : '' %>>Add to bag <i class="bi bi-arrow-right"></i></button>
+          <button class="detail-wishlist" type="button" data-wishlist="<%= product.slug %>" aria-label="Add <%= product.name %> to wishlist" aria-pressed="false"><i class="bi bi-heart"></i></button>
+        </div>
+      </form>
+      <div class="product-accordions">
+        <details open><summary>Description</summary><p><%= product.description %></p></details>
+        <details><summary>Materials & care</summary><p><%= product.materials || 'Selected materials, thoughtfully sourced and finished by hand.' %></p><p><%= product.careInstructions || 'Care instructions are included with your piece.' %></p></details>
+        <details><summary>Shipping & returns</summary><p><%= product.shippingInformation || 'Complimentary delivery on orders over €500. Orders are prepared in our atelier within two working days.' %></p><p><%= product.returnsInformation || 'Returns are accepted within 14 days of delivery in original condition.' %></p></details>
+        <details><summary>Client reviews <span> <%= reviews.length ? reviews.length : '—' %></span></summary><p><%= reviews.length ? 'Reviews for this piece.' : 'There are no reviews for this piece yet.' %></p></details>
+      </div>
+    </div>
+  </section>
+  <% if (relatedProducts.length) { %>
+    <section class="related-products section-pad">
+      <div class="section-heading-row"><div><p class="eyebrow">Continue exploring</p><h2>In the same spirit.</h2></div><a class="text-cta dark-cta" href="/products?category=<%= encodeURIComponent(product.category) %>">See <%= product.category.toLowerCase() %> <i class="bi bi-arrow-right"></i></a></div>
+      <div class="row product-grid g-3 g-lg-4"><% relatedProducts.forEach((relatedProduct) => { %><div class="col-6 col-md-4 col-xl-3"><%- include('partials/product-card', { product: relatedProduct }) %></div><% }) %></div>
+    </section>
+  <% } %>
+</main>
+<div class="modal fade" id="sizeGuideModal" tabindex="-1" aria-labelledby="sizeGuideTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content size-guide-modal"><div class="modal-header"><h2 class="modal-title" id="sizeGuideTitle">A note on sizing</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>Our pieces are designed to fit true to size. If you are between sizes, we recommend choosing the larger size.</p><p>For personal guidance, please contact our client care team.</p></div></div></div></div>
+<%- include('partials/quick-view-modal') %>
+<%- include('partials/footer') %>

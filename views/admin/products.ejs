@@ -1,0 +1,18 @@
+<%- include('../partials/header', { title }) %>
+<main class="admin-page container-fluid">
+  <header class="admin-heading"><div><p class="eyebrow">Maison Atelier · Administration</p><h1>Products</h1></div><a class="admin-primary-link" href="/admin/products/new"><i class="bi bi-plus-lg"></i> Add product</a></header>
+  <%- include('_nav') %>
+  <% if (notice) { %><p class="admin-notice" role="status"><%= notice %></p><% } %>
+  <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Flags</th><th>Actions</th></tr></thead><tbody>
+    <% products.forEach((product) => { %><tr>
+      <td><div class="admin-product-cell"><% if (product.images[0]) { %><img src="<%= product.images[0] %>" alt="" loading="lazy"><% } else { %><span class="admin-product-image-placeholder"></span><% } %><span><strong><%= product.name %></strong><small><%= product.slug %></small></span></div></td>
+      <td><%= product.category %></td>
+      <td>€<%= Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+      <td class="<%= product.stock <= 5 ? 'stock-alert' : '' %>"><%= product.stock %></td>
+      <td><%= [product.featured ? 'Featured' : '', product.newArrival ? 'New' : ''].filter(Boolean).join(' · ') || '—' %></td>
+      <td><div class="admin-row-actions"><a href="/admin/products/<%= product._id %>/edit">Edit</a><form action="/admin/products/<%= product._id %>/delete" method="post" data-confirm-delete><button type="submit">Delete</button></form></div></td>
+    </tr><% }) %>
+  </tbody></table></div>
+  <% if (!products.length) { %><p class="admin-empty-note">No products yet.</p><% } %>
+</main>
+<%- include('../partials/footer') %>

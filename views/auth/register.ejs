@@ -1,0 +1,19 @@
+<%- include('../partials/header', { title }) %>
+<main class="auth-page">
+  <p class="eyebrow">A place for your favourites</p>
+  <h1>Create your account.</h1>
+  <p class="auth-intro">Keep your wishlist close, wherever you return.</p>
+  <% if (error) { %><p class="auth-error" role="alert"><%= error %></p><% } %>
+  <form class="auth-form" action="/register" method="post">
+    <input type="hidden" name="returnTo" value="<%= returnTo %>">
+    <label for="registerName">Name</label>
+    <input id="registerName" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" value="<%= name || '' %>" required>
+    <label for="registerEmail">Email address</label>
+    <input id="registerEmail" name="email" type="email" autocomplete="email" maxlength="254" value="<%= email %>" required>
+    <label for="registerPassword">Password</label>
+    <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+    <button class="auth-submit" type="submit">Create account <i class="bi bi-arrow-right"></i></button>
+  </form>
+  <p class="auth-switch">Already have an account? <a href="/login?returnTo=<%= encodeURIComponent(returnTo) %>">Sign in</a></p>
+</main>
+<%- include('../partials/footer') %>

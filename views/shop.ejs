@@ -1,0 +1,29 @@
+<%- include('partials/header', { title }) %>
+<main class="shop-page">
+  <section class="shop-heading container-fluid">
+    <p class="eyebrow">The Maison Atelier collection</p>
+    <h1><%= activeCategory === 'All pieces' ? 'Considered, in every detail.' : activeCategory + '.' %></h1>
+    <p>Objects of enduring beauty, made to become your own.</p>
+  </section>
+  <section class="shop-content container-fluid">
+    <div class="shop-toolbar">
+      <div class="category-filters" aria-label="Filter by category">
+        <% categories.forEach((category) => { %>
+          <% const categoryUrl = category === 'All pieces' ? '/shop' : '/shop?category=' + encodeURIComponent(category); %>
+          <a class="filter-link <%= activeCategory === category ? 'is-active' : '' %>" href="<%= categoryUrl %>"><%= category %></a>
+        <% }) %>
+      </div>
+      <span class="results-count"><%= products.length %> pieces</span>
+    </div>
+    <% if (products.length) { %>
+      <div class="row product-grid g-3 g-lg-4">
+        <% products.forEach((product) => { %>
+          <div class="col-6 col-md-4 col-xl-3"><%- include('partials/product-card', { product }) %></div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state"><p>New pieces are being prepared for this edit.</p><a class="text-cta dark-cta" href="/shop">View all pieces <i class="bi bi-arrow-right"></i></a></div>
+    <% } %>
+  </section>
+</main>
+<%- include('partials/footer') %>

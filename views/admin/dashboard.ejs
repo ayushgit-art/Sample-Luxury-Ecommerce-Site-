@@ -1,0 +1,18 @@
+<%- include('../partials/header', { title }) %>
+<main class="admin-page container-fluid">
+  <header class="admin-heading"><div><p class="eyebrow">Maison Atelier · Administration</p><h1>Overview</h1></div><a class="text-cta dark-cta" href="/">View storefront <i class="bi bi-arrow-up-right"></i></a></header>
+  <%- include('_nav') %>
+  <section class="admin-metrics" aria-label="Store metrics">
+    <article><span>Total products</span><strong><%= metrics.totalProducts %></strong></article>
+    <article><span>Total users</span><strong><%= metrics.totalUsers %></strong></article>
+    <article><span>Total orders</span><strong><%= metrics.totalOrders %></strong></article>
+    <article><span>Revenue · paid orders</span><strong>€<%= Number(metrics.revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></article>
+    <article><span>Pending orders</span><strong><%= metrics.pendingOrders %></strong></article>
+    <article><span>Low-stock products · 5 or fewer</span><strong><%= metrics.lowStockCount %></strong></article>
+  </section>
+  <section class="admin-section">
+    <div class="admin-section-heading"><div><p class="eyebrow">Stock attention</p><h2>Low-stock products</h2></div><a class="admin-inline-link" href="/admin/products">All products <i class="bi bi-arrow-right"></i></a></div>
+    <% if (lowStockProducts.length) { %><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th></th></tr></thead><tbody><% lowStockProducts.forEach((product) => { %><tr><td><%= product.name %></td><td><%= product.category %></td><td><strong class="stock-alert"><%= product.stock %></strong></td><td><a href="/admin/products/<%= product._id %>/edit">Edit</a></td></tr><% }) %></tbody></table></div><% } else { %><p class="admin-empty-note">No products are currently at low stock.</p><% } %>
+  </section>
+</main>
+<%- include('../partials/footer') %>

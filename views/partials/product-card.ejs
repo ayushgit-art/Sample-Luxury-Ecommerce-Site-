@@ -1,0 +1,23 @@
+<article class="product-card">
+  <div class="product-image-wrap">
+    <a class="product-image-link" href="/products/<%= product.slug %>" aria-label="View <%= product.name %>">
+      <img class="product-image" src="<%= product.images ? product.images[0] : product.image %>" alt="<%= product.imageAlt || product.name %>" loading="lazy">
+      <% if (product.images && product.images[1]) { %><img class="product-image product-image-alt" src="<%= product.images[1] %>" alt="" loading="lazy"><% } %>
+    </a>
+    <% if (product.isNew || product.newArrival) { %><span class="product-badge">New season</span><% } %>
+    <div class="product-card-tools">
+      <button class="card-tool wishlist-button" type="button" aria-label="Add <%= product.name %> to wishlist" aria-pressed="false" data-wishlist="<%= product.slug %>"><i class="bi bi-heart"></i></button>
+      <button class="card-tool quick-view-button" type="button" aria-label="Quick view <%= product.name %>" data-quick-view data-bs-toggle="modal" data-bs-target="#quickViewModal" data-name="<%= product.name %>" data-category="<%= product.category %>" data-price="<%= product.discountPrice || product.price %>" data-image="<%= product.images ? product.images[0] : product.image %>" data-description="<%= product.description || '' %>" data-url="/products/<%= product.slug %>"><i class="bi bi-arrows-angle-expand"></i></button>
+    </div>
+  </div>
+  <div class="product-info">
+    <div class="product-copy">
+      <p class="product-category"><%= product.category %></p>
+      <h3><a href="/products/<%= product.slug %>"><%= product.name %></a></h3>
+      <% if (product.colors && product.colors.length) { %><p class="product-color"><%= product.colors.join(' · ') %></p><% } %>
+    </div>
+    <div class="product-actions">
+      <% if (product.discountPrice) { %><span class="product-price"><del>€<%= product.price.toLocaleString('en-US') %></del> €<%= product.discountPrice.toLocaleString('en-US') %></span><% } else { %><span class="product-price">€<%= product.price.toLocaleString('en-US') %></span><% } %>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,24 @@
+<%- include('partials/header', { title }) %>
+<main class="account-page container-fluid">
+  <header class="account-heading">
+    <p class="eyebrow">Maison Atelier · Private account</p>
+    <h1>Your account</h1>
+    <p>Welcome, <%= user.name %>.</p>
+  </header>
+  <div class="account-layout">
+    <section class="account-details" aria-labelledby="accountDetailsTitle">
+      <div class="account-section-heading"><p class="eyebrow">Your details</p><h2 id="accountDetailsTitle">Account information</h2></div>
+      <dl class="account-data-list">
+        <div><dt>Name</dt><dd><%= user.name %></dd></div>
+        <div><dt>Email address</dt><dd><%= user.email %></dd></div>
+        <div><dt>Member since</dt><dd><%= new Date(user.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }) %></dd></div>
+      </dl>
+    </section>
+    <nav class="account-links" aria-label="Account areas">
+      <a href="/wishlist"><span><small>Saved pieces</small><strong>Your wishlist</strong></span><i class="bi bi-arrow-up-right"></i></a>
+      <a href="/orders" id="orders"><span><small>Order history</small><strong>Orders</strong></span><i class="bi bi-arrow-up-right"></i></a>
+      <% if (currentUser && currentUser.role === 'admin') { %><a href="/admin"><span><small>Store management</small><strong>Administration</strong></span><i class="bi bi-arrow-up-right"></i></a><% } %>
+    </nav>
+  </div>
+</main>
+<%- include('partials/footer') %>

@@ -1,0 +1,19 @@
+<%- include('partials/header', { title }) %>
+<main class="wishlist-page container-fluid" data-wishlist-page>
+  <div class="wishlist-heading">
+    <p class="eyebrow">Saved for you</p>
+    <h1>Your wishlist</h1>
+    <p><%= email %></p>
+  </div>
+  <% if (products.length) { %>
+    <p class="wishlist-count"><span data-wishlist-total><%= products.length %></span> pieces</p>
+    <div class="row product-grid wishlist-grid g-3 g-lg-4">
+      <% products.forEach((product) => { %><div class="col-6 col-md-4 col-xl-3"><%- include('partials/product-card', { product }) %></div><% }) %>
+    </div>
+    <div class="wishlist-empty" data-wishlist-empty hidden><p>Your wishlist is ready for something lovely.</p><a class="text-cta dark-cta" href="/products">Explore the collection <i class="bi bi-arrow-right"></i></a></div>
+  <% } else { %>
+    <div class="wishlist-empty"><p>Your wishlist is ready for something lovely.</p><a class="text-cta dark-cta" href="/products">Explore the collection <i class="bi bi-arrow-right"></i></a></div>
+  <% } %>
+</main>
+<%- include('partials/quick-view-modal') %>
+<%- include('partials/footer') %>

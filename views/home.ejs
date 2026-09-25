@@ -1,0 +1,85 @@
+<%- include('partials/header', { title }) %>
+<main>
+  <section class="hero-section" aria-label="Spring summer collection">
+    <img class="hero-image" src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=2400&q=90" alt="A light summer look beside the Mediterranean">
+    <div class="hero-scrim"></div>
+    <div class="hero-content" data-reveal>
+      <p class="eyebrow hero-eyebrow">Collection 04 · Spring / Summer</p>
+      <h1>A softer kind<br>of presence.</h1>
+      <p class="hero-subtitle">Considered pieces for the life you choose.</p>
+      <a class="text-cta hero-cta" href="/products">Shop collection <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <span class="hero-caption">PARIS · MILAN · EVERYWHERE</span>
+    <a class="hero-scroll" href="#collections" aria-label="Scroll to collections"><i class="bi bi-arrow-down"></i></a>
+  </section>
+
+  <section class="arrival-section section-pad" id="new-arrivals">
+    <div class="section-heading-row">
+      <div><p class="eyebrow">Just arrived</p><h2>New, with intention.</h2></div>
+      <a class="text-cta dark-cta" href="/products?sort=newest">View all arrivals <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="row product-grid g-3 g-lg-4">
+      <% newArrivals.forEach((product) => { %>
+        <div class="col-6 col-md-4 col-xl-3" data-reveal><%- include('partials/product-card', { product }) %></div>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="category-section section-pad" id="collections">
+    <div class="section-heading-row">
+      <div><p class="eyebrow">Explore by category</p><h2>Made for the way you move.</h2></div>
+      <a class="text-cta dark-cta" href="/products">View all pieces <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="category-grid category-grid-four">
+      <% categories.forEach((category, index) => { %>
+        <a class="category-tile category-tile-<%= index + 1 %>" href="<%= category.href %>" data-reveal>
+          <img src="<%= category.image %>" alt="<%= category.name %> collection" loading="lazy">
+          <div class="category-tile-caption"><div><h3><%= category.name %></h3><p><%= category.note %></p></div><span><i class="bi bi-arrow-up-right"></i></span></div>
+        </a>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="editorial-banner" data-reveal>
+    <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=2200&q=88" alt="A considered city wardrobe in afternoon light" loading="lazy">
+    <div class="editorial-overlay"></div>
+    <div class="editorial-copy"><p class="eyebrow hero-eyebrow">The city, at your own pace</p><h2>On the art<br>of arriving.</h2><a class="text-cta hero-cta" href="/products?category=Clothing">Explore the story <i class="bi bi-arrow-right"></i></a></div>
+    <span class="editorial-index">STUDY NO. 04</span>
+  </section>
+
+  <section class="featured-section section-pad">
+    <div class="section-heading-row">
+      <div><p class="eyebrow">The atelier selects</p><h2>Pieces to keep close.</h2></div>
+      <a class="text-cta dark-cta" href="/products?sort=popularity">Discover the edit <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="row product-grid g-3 g-lg-4">
+      <% featuredProducts.forEach((product) => { %>
+        <div class="col-6 col-lg-3" data-reveal><%- include('partials/product-card', { product }) %></div>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="atelier-section" id="atelier">
+    <div class="atelier-image"><img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1800&q=85" alt="A quiet atelier worktable with natural materials" loading="lazy"></div>
+    <div class="atelier-copy" data-reveal>
+      <p class="eyebrow">Our point of view</p>
+      <h2>Time is part<br>of the craft.</h2>
+      <p>We believe in fewer, better things. In independent European ateliers, natural materials and the thoughtful work of skilled hands.</p>
+      <a class="text-cta dark-cta" href="/products">The Maison philosophy <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </section>
+
+  <section class="home-newsletter" data-reveal>
+    <p class="eyebrow">Notes from the atelier</p>
+    <h2>A little more considered.</h2>
+    <p>New collections, thoughtful stories and invitations, sent occasionally.</p>
+    <form class="newsletter-form home-newsletter-form" data-newsletter-form>
+      <label class="visually-hidden" for="homeNewsletterEmail">Email address</label>
+      <input id="homeNewsletterEmail" type="email" placeholder="Your email address" required>
+      <button type="submit" aria-label="Subscribe"><i class="bi bi-arrow-right"></i></button>
+    </form>
+    <p class="newsletter-message" data-newsletter-message aria-live="polite"></p>
+  </section>
+</main>
+<%- include('partials/quick-view-modal') %>
+<%- include('partials/footer') %>

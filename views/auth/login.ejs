@@ -1,0 +1,17 @@
+<%- include('../partials/header', { title }) %>
+<main class="auth-page">
+  <p class="eyebrow">Welcome back</p>
+  <h1>Sign in to your account.</h1>
+  <p class="auth-intro">Your considered edit, kept close.</p>
+  <% if (error) { %><p class="auth-error" role="alert"><%= error %></p><% } %>
+  <form class="auth-form" action="/login" method="post">
+    <input type="hidden" name="returnTo" value="<%= returnTo %>">
+    <label for="loginEmail">Email address</label>
+    <input id="loginEmail" name="email" type="email" autocomplete="email" maxlength="254" value="<%= email %>" required>
+    <label for="loginPassword">Password</label>
+    <input id="loginPassword" name="password" type="password" autocomplete="current-password" maxlength="72" required>
+    <button class="auth-submit" type="submit">Sign in <i class="bi bi-arrow-right"></i></button>
+  </form>
+  <p class="auth-switch">New to Maison Atelier? <a href="/register?returnTo=<%= encodeURIComponent(returnTo) %>">Create an account</a></p>
+</main>
+<%- include('../partials/footer') %>

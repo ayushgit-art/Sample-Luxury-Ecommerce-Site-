@@ -1,0 +1,56 @@
+<%- include('partials/header', { title }) %>
+<main class="checkout-page container-fluid">
+  <header class="checkout-heading"><p class="eyebrow">Maison Atelier · Secure order details</p><h1>Checkout</h1><p>Review your details before placing your order.</p></header>
+  <% if (error) { %><p class="checkout-error" role="alert"><%= error %></p><% } %>
+  <% if (cartItems.length) { %>
+    <form class="checkout-layout" action="/checkout" method="post">
+      <div class="checkout-fields">
+        <section class="checkout-section">
+          <div class="checkout-section-title"><span>01</span><h2>Contact information</h2></div>
+          <div class="checkout-form-grid">
+            <label>Full name<input name="contactName" type="text" autocomplete="name" maxlength="80" value="<%= values.contactName || values.defaults.contactName %>" required></label>
+            <label>Email address<input name="contactEmail" type="email" autocomplete="email" maxlength="254" value="<%= values.contactEmail || values.defaults.contactEmail %>" required></label>
+            <label class="checkout-full-width">Phone <span class="optional-label">Optional</span><input name="phone" type="tel" autocomplete="tel" value="<%= values.phone || '' %>"></label>
+          </div>
+        </section>
+        <section class="checkout-section">
+          <div class="checkout-section-title"><span>02</span><h2>Shipping address</h2></div>
+          <div class="checkout-form-grid">
+            <label class="checkout-full-width">Address line 1<input name="addressLine1" type="text" autocomplete="address-line1" maxlength="120" value="<%= values.addressLine1 || '' %>" required></label>
+            <label class="checkout-full-width">Address line 2 <span class="optional-label">Optional</span><input name="addressLine2" type="text" autocomplete="address-line2" maxlength="120" value="<%= values.addressLine2 || '' %>"></label>
+            <label>City<input name="city" type="text" autocomplete="address-level2" maxlength="80" value="<%= values.city || '' %>" required></label>
+            <label>Region <span class="optional-label">Optional</span><input name="region" type="text" autocomplete="address-level1" maxlength="80" value="<%= values.region || '' %>"></label>
+            <label>Postal code<input name="postalCode" type="text" autocomplete="postal-code" maxlength="24" value="<%= values.postalCode || '' %>" required></label>
+            <label>Country<input name="country" type="text" autocomplete="country-name" maxlength="80" value="<%= values.country || '' %>" required></label>
+          </div>
+        </section>
+        <section class="checkout-section payment-section">
+          <div class="checkout-section-title"><span>03</span><h2>Payment method</h2></div>
+          <label class="mock-payment-option"><input type="radio" name="paymentMethod" value="mock" checked><span><strong>Mock payment</strong><small>No payment details are collected. This order will be recorded as pending.</small></span><i class="bi bi-check-circle"></i></label>
+        </section>
+      </div>
+      <aside class="checkout-summary">
+        <p class="eyebrow">Order summary · <%= quantity %> <%= quantity === 1 ? 'piece' : 'pieces' %></p>
+        <div class="checkout-summary-items">
+          <% cartItems.forEach((item) => { const unitPrice = item.product.discountPrice == null ? item.product.price : item.product.discountPrice; %>
+            <div class="checkout-summary-item">
+              <img src="<%= item.product.images[0] %>" alt="<%= item.product.name %>">
+              <div><strong><%= item.product.name %></strong><small>Qty <%= item.quantity %><% if (item.size) { %> · <%= item.size %><% } %><% if (item.color) { %> · <%= item.color %><% } %></small></div>
+              <span>€<%= formatPrice(unitPrice * item.quantity) %></span>
+            </div>
+          <% }) %>
+        </div>
+        <div class="checkout-total-row"><span>Subtotal</span><span>€<%= formatPrice(subtotal) %></span></div>
+        <div class="checkout-total-row"><span>Shipping</span><span><%= shippingCost ? `€${formatPrice(shippingCost)}` : 'Complimentary' %></span></div>
+        <div class="checkout-total-row"><span>Estimated tax · 20%</span><span>€<%= formatPrice(tax) %></span></div>
+        <div class="checkout-grand-total"><strong>Total</strong><strong>€<%= formatPrice(total) %></strong></div>
+        <% if (error) { %><button class="place-order-button" type="submit" disabled>Review your bag to continue</button><% } else { %><button class="place-order-button" type="submit">Place order <i class="bi bi-arrow-right"></i></button><% } %>
+        <p class="checkout-terms-note">Placing this order records a pending mock payment. No payment will be collected.</p>
+        <a class="checkout-back-link" href="/cart"><i class="bi bi-arrow-left"></i> Return to your bag</a>
+      </aside>
+    </form>
+  <% } else { %>
+    <section class="checkout-empty"><p>Your bag is empty.</p><a href="/cart" class="text-cta dark-cta">Return to your bag <i class="bi bi-arrow-right"></i></a></section>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

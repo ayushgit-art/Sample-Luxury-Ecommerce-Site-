@@ -1,0 +1,10 @@
+<%- include('../partials/header', { title }) %>
+<main class="admin-page container-fluid">
+  <header class="admin-heading"><div><p class="eyebrow">Maison Atelier · Administration</p><h1>Users</h1></div></header>
+  <%- include('_nav') %>
+  <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody>
+    <% users.forEach((user) => { %><tr><td><%= user.name %></td><td><%= user.email %></td><td><span class="admin-role role-<%= user.role %>"><%= user.role %></span></td><td><%= new Date(user.createdAt).toLocaleDateString('en-GB') %></td></tr><% }) %>
+  </tbody></table></div>
+  <% if (!users.length) { %><p class="admin-empty-note">No users are registered.</p><% } %>
+</main>
+<%- include('../partials/footer') %>
