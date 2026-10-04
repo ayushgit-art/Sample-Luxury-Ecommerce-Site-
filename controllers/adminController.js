@@ -7,9 +7,12 @@ const { uploadProductImage, deleteProductImage } = require('../config/cloudinary
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Review = require('../models/Review');
 const User = require('../models/User');
+const { deleteReview } = require('./reviewController');
+const { cancelCustomerOrder } = require('../services/orderCancellation');
 
-const orderStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+const orderStatuses = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'];
 const maximumImageCount = 8;
 const maximumImageSize = 5 * 1024 * 1024;
 const productImageDirectory = path.join(__dirname, '..', 'uploads', 'products');
@@ -413,6 +416,8 @@ async function renderOrder(req, res, next) {
       order,
       confirmation: false,
       isAdminView: true,
+      cancellationError: '',
+      canCancel: false,
       formatPrice: (amount) => Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     });
   } catch (error) {
@@ -427,6 +432,16 @@ async function updateOrderStatus(req, res, next) {
     return res.status(422).render('admin/forbidden', { title: 'Invalid order status | Maison Atelier Admin' });
   }
   try {
+    if (orderStatus === 'cancelled') {
+      const currentOrder = await Order.findById(req.params.id).select('orderStatus');
+      if (!currentOrder) return res.status(404).render('404', { title: 'Order not found | Maison Atelier' });
+      if (['pending', 'confirmed', 'processing', 'packed'].includes(currentOrder.orderStatus)) {
+        const cancelled = await cancelCustomerOrder(currentOrder._id);
+        if (!cancelled) return res.status(409).render('admin/forbidden', { title: 'Order status changed | Maison Atelier Admin' });
+        return res.redirect(`/admin/orders/${cancelled._id}`);
+      }
+      return res.status(409).render('admin/forbidden', { title: 'Order cannot be cancelled | Maison Atelier Admin' });
+    }
     const order = await Order.findByIdAndUpdate(req.params.id, { $set: { orderStatus } }, { new: true, runValidators: true });
     if (!order) return res.status(404).render('404', { title: 'Order not found | Maison Atelier' });
     res.redirect(`/admin/orders/${order._id}`);
@@ -439,6 +454,20 @@ async function renderUsers(_req, res, next) {
   try {
     const users = await User.find().select('name email role createdAt').sort({ createdAt: -1 }).lean();
     res.render('admin/users', { title: 'Users | Maison Atelier Admin', users });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function renderReviews(_req, res, next) {
+  try {
+    const reviews = await Review.find({ isRemoved: { $ne: true } })
+      .populate('user', 'name email')
+      .populate('product', 'name slug')
+      .populate('order', 'createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.render('admin/reviews', { title: 'Reviews | Maison Atelier Admin', reviews });
   } catch (error) {
     next(error);
   }
@@ -457,5 +486,7 @@ module.exports = {
   renderOrders,
   renderOrder,
   updateOrderStatus,
+  renderReviews,
+  deleteReview,
   renderUsers
 };

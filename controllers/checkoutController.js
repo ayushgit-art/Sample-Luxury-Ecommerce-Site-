@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
-const Product = require('../models/Product');
+const { validateOrderStock, deductOrderStock, restoreStock } = require('../services/inventory');
 
 const SHIPPING_THRESHOLD = 500;
 const SHIPPING_COST = 12;
@@ -32,7 +32,7 @@ function checkoutValues(body, req) {
     postalCode: String(body.postalCode || '').trim(),
     country: String(body.country || '').trim(),
     phone: String(body.phone || '').trim(),
-    paymentMethod: String(body.paymentMethod || 'mock'),
+    paymentMethod: String(body.paymentMethod || 'online'),
     defaults: {
       contactName: req.session.userName || '',
       contactEmail: req.session.userEmail || ''
@@ -102,7 +102,7 @@ async function submitCheckout(req, res, next) {
   const values = checkoutValues(req.body, req);
   let data;
   let order;
-  const decrementedStock = [];
+  let stockDeductions = [];
 
   try {
     data = await getCheckoutData(req.session.userId);
@@ -118,13 +118,10 @@ async function submitCheckout(req, res, next) {
     if (!values.addressLine1 || !values.city || !values.postalCode || !values.country) {
       throw new CheckoutIssue('Complete the required shipping address fields.');
     }
-    if (values.paymentMethod !== 'mock') throw new CheckoutIssue('Select the mock payment method to continue.');
+    if (!['online', 'cod'].includes(values.paymentMethod)) throw new CheckoutIssue('Select a valid payment method.');
 
-    const quantitiesByProduct = new Map();
     const orderItems = data.cartItems.map((item) => {
       const product = item.product;
-      const productId = String(product._id);
-      quantitiesByProduct.set(productId, (quantitiesByProduct.get(productId) || 0) + item.quantity);
       return {
         product: product._id,
         name: product.name,
@@ -138,16 +135,8 @@ async function submitCheckout(req, res, next) {
       };
     });
 
-    for (const [productId, quantity] of quantitiesByProduct) {
-      const result = await Product.updateOne(
-        { _id: productId, stock: { $gte: quantity } },
-        { $inc: { stock: -quantity } }
-      );
-      if (result.modifiedCount !== 1) {
-        throw new CheckoutIssue('Stock changed while you were checking out. Review your bag and try again.');
-      }
-      decrementedStock.push({ productId, quantity });
-    }
+    await validateOrderStock(orderItems);
+    if (values.paymentMethod === 'cod') stockDeductions = await deductOrderStock(orderItems);
 
     order = await Order.create({
       user: new mongoose.Types.ObjectId(req.session.userId),
@@ -167,19 +156,23 @@ async function submitCheckout(req, res, next) {
       shippingCost: data.shippingCost,
       tax: data.tax,
       total: data.total,
+      paymentMethod: values.paymentMethod,
       paymentStatus: 'pending',
-      orderStatus: 'pending'
+      inventoryReservationStatus: values.paymentMethod === 'cod' ? 'consumed' : 'none',
+      orderStatus: values.paymentMethod === 'cod' ? 'confirmed' : 'pending'
     });
 
     await CartItem.deleteMany({ user: req.session.userId });
     return res.redirect(`/order-confirmation/${order._id}`);
   } catch (error) {
-    if (order) await Order.deleteOne({ _id: order._id }).catch(() => {});
-    await Promise.all(decrementedStock.map(({ productId, quantity }) =>
-      Product.updateOne({ _id: productId }, { $inc: { stock: quantity } })
-    ));
+    try {
+      if (order) await Order.deleteOne({ _id: order._id });
+      if (stockDeductions.length) await restoreStock(stockDeductions);
+    } catch (rollbackError) {
+      return next(new AggregateError([error, rollbackError], 'Checkout failed and order rollback was incomplete.'));
+    }
 
-    if (error instanceof CheckoutIssue) {
+    if (error instanceof CheckoutIssue || error.code === 'INSUFFICIENT_STOCK') {
       try {
         data = await getCheckoutData(req.session.userId);
       } catch (_cartError) {
@@ -203,7 +196,20 @@ async function showOrderConfirmation(req, res, next) {
       title: `Order received | Maison Atelier`,
       order,
       confirmation: true,
-        isAdminView: false,
+      isAdminView: false,
+      cancellationError: '',
+      canCancel: false,
+      paymentMessage: order.orderStatus === 'cancelled'
+        ? 'This order has been cancelled.'
+        : req.query.payment === 'success'
+          ? 'Razorpay verified your payment successfully.'
+          : req.query.payment === 'inventory-issue'
+            ? 'Your payment was received, but stock changed before fulfillment. The order is cancelled; contact support for manual refund handling. No refund has been processed automatically.'
+            : req.query.payment === 'cancelled'
+              ? 'Payment was cancelled. Your order remains pending; you can try again below.'
+              : order.paymentMethod === 'cod'
+                ? 'Your order is confirmed. Payment will be collected when it is delivered.'
+                : null,
       formatPrice: (amount) => Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     });
   } catch (error) {

@@ -1,13 +1,30 @@
 <%- include('partials/header', { title }) %>
 <main class="order-detail-page container-fluid">
-  <% if (confirmation) { %><section class="order-confirmation-banner"><p class="eyebrow">Order received</p><h2>Thank you for your order.</h2><p>Your order is recorded with mock payment pending. No payment was collected.</p></section><% } %>
+  <% if (confirmation) { %><section class="order-confirmation-banner"><p class="eyebrow"><%= order.orderStatus === 'cancelled' ? 'Order cancelled' : order.paymentMethod === 'cod' ? 'Order confirmed' : order.paymentStatus === 'paid' ? 'Payment confirmed' : 'Order summary' %></p><h2><%= order.orderStatus === 'cancelled' ? 'This order has been cancelled.' : order.paymentMethod === 'cod' ? 'Your order is confirmed.' : order.paymentStatus === 'paid' ? 'Thank you for your payment.' : 'Review your order.' %></h2><p><%= paymentMessage || (order.paymentMethod === 'cod' ? 'Payment will be collected on delivery.' : order.paymentStatus === 'paid' ? 'Your payment has been verified securely.' : 'Your order is saved. Complete payment to confirm it.') %></p></section><% } %>
     <nav class="breadcrumbs container-fluid" aria-label="Breadcrumb"><a href="<%= isAdminView ? '/admin' : '/account' %>"><%= isAdminView ? 'Administration' : 'Account' %></a><i class="bi bi-chevron-right"></i><a href="<%= isAdminView ? '/admin/orders' : '/orders' %>">Orders</a><i class="bi bi-chevron-right"></i><span>Order #<%= String(order._id).slice(-8).toUpperCase() %></span></nav>
   <header class="order-detail-heading">
     <p class="eyebrow">Placed <%= new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></p>
     <div><h1>Order #<%= String(order._id).slice(-8).toUpperCase() %></h1><span class="order-status-badge status-<%= order.orderStatus %>"><%= order.orderStatus %></span></div>
-    <p>Payment · <%= order.paymentStatus %></p>
-      <% if (isAdminView) { %><div class="admin-order-controls"><p>Customer · <%= order.user ? `${order.user.name} · ${order.user.email}` : (order.contactEmail || 'Account removed') %></p><form action="/admin/orders/<%= order._id %>/status" method="post"><label for="adminOrderStatus">Order status</label><select id="adminOrderStatus" name="orderStatus"><% ['pending', 'processing', 'shipped', 'delivered', 'cancelled'].forEach((status) => { %><option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option><% }) %></select><button type="submit">Update status</button></form></div><% } %>
+    <p>Payment method · <%= order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online' %> · Payment status · <%= order.paymentStatus %></p>
+    <% if (order.paymentMethod === 'cod' && order.paymentStatus === 'pending') { %><p class="order-cod-note">Payment will be collected on delivery.</p><% } %>
+    <% if (cancellationError) { %><p class="review-message review-error" role="alert"><%= cancellationError %></p><% } %>
+    <% if (!isAdminView && canCancel) { %><form class="order-cancel-form" action="/orders/<%= order._id %>/cancel" method="post" data-confirm-order-cancel><button type="submit">Cancel order</button><% if (order.paymentStatus === 'paid' && order.paymentMethod !== 'cod') { %><small>If eligible, refund handling will be manual and is not processed automatically.</small><% } %></form><% } %>
+    <% if (!isAdminView && (order.paymentMethod || 'online') === 'online' && ['pending', 'failed'].includes(order.paymentStatus)) { %>
+      <div class="order-payment" data-razorpay-payment data-order-id="<%= order._id %>">
+        <p class="checkout-error" data-payment-message role="status" aria-live="polite" hidden></p>
+        <button class="place-order-button" type="button" data-pay-now><%= order.paymentStatus === 'failed' ? 'Retry Payment' : 'Pay Now' %> <i class="bi bi-arrow-right"></i></button>
+        <p class="checkout-terms-note">Secure payment powered by Razorpay.</p>
+      </div>
+    <% } %>
+      <% if (isAdminView) { %><div class="admin-order-controls"><p>Customer · <%= order.user ? `${order.user.name} · ${order.user.email}` : (order.contactEmail || 'Account removed') %></p><p>Payment method · <%= order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online' %></p><p>Payment status · <%= order.paymentStatus %></p><% if (order.razorpayPaymentId) { %><p>Payment ID · <%= order.razorpayPaymentId %></p><% } %><form action="/admin/orders/<%= order._id %>/status" method="post"><label for="adminOrderStatus">Order status</label><select id="adminOrderStatus" name="orderStatus"><% ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'].forEach((status) => { %><option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option><% }) %></select><button type="submit">Update status</button></form></div><% } %>
   </header>
+  <% if (!isAdminView) { const statusSteps = ['confirmed', 'processing', 'packed', 'shipped', 'delivered']; const currentStep = statusSteps.indexOf(order.orderStatus); %>
+    <section class="order-status-timeline" aria-label="Order status timeline">
+      <p class="eyebrow">Order status · <strong><%= order.orderStatus %></strong></p>
+      <% if (order.orderStatus === 'cancelled') { %><p>This order has been cancelled.</p><% } else if (order.orderStatus === 'pending') { %><p>Your order is awaiting confirmation.</p><% } %>
+      <ol><% statusSteps.forEach((status, index) => { %><li class="<%= currentStep >= index ? 'is-complete' : '' %> <%= currentStep === index ? 'is-current' : '' %>"><span><%= status %></span></li><% }) %></ol>
+    </section>
+  <% } %>
   <div class="order-detail-layout">
     <section class="order-detail-items" aria-label="Products in this order">
       <% order.items.forEach((item) => { %>
@@ -32,4 +49,5 @@
     </aside>
   </div>
 </main>
+<% if (!isAdminView && (order.paymentMethod || 'online') === 'online' && ['pending', 'failed'].includes(order.paymentStatus)) { %><script src="/js/razorpay-payment.js" defer></script><% } %>
 <%- include('partials/footer') %>

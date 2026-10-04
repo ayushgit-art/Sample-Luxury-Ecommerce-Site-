@@ -1,6 +1,6 @@
 <%- include('partials/header', { title }) %>
 <main class="checkout-page container-fluid">
-  <header class="checkout-heading"><p class="eyebrow">Maison Atelier · Secure order details</p><h1>Checkout</h1><p>Review your details before placing your order.</p></header>
+  <header class="checkout-heading"><p class="eyebrow">Maison Atelier · Secure order details</p><h1>Checkout</h1><p>Review your details before continuing to your order summary.</p></header>
   <% if (error) { %><p class="checkout-error" role="alert"><%= error %></p><% } %>
   <% if (cartItems.length) { %>
     <form class="checkout-layout" action="/checkout" method="post">
@@ -26,7 +26,8 @@
         </section>
         <section class="checkout-section payment-section">
           <div class="checkout-section-title"><span>03</span><h2>Payment method</h2></div>
-          <label class="mock-payment-option"><input type="radio" name="paymentMethod" value="mock" checked><span><strong>Mock payment</strong><small>No payment details are collected. This order will be recorded as pending.</small></span><i class="bi bi-check-circle"></i></label>
+          <label class="mock-payment-option"><input type="radio" name="paymentMethod" value="online" <%= values.paymentMethod === 'online' ? 'checked' : '' %>><span><strong>Pay online</strong><small>Review your order, then pay securely with Razorpay Test Mode.</small></span><i class="bi bi-check-circle"></i></label>
+          <label class="mock-payment-option"><input type="radio" name="paymentMethod" value="cod" <%= values.paymentMethod === 'cod' ? 'checked' : '' %>><span><strong>Cash on Delivery</strong><small>Pay the delivery agent when your order arrives. No online payment is required now.</small></span><i class="bi bi-check-circle"></i></label>
         </section>
       </div>
       <aside class="checkout-summary">
@@ -44,8 +45,8 @@
         <div class="checkout-total-row"><span>Shipping</span><span><%= shippingCost ? `€${formatPrice(shippingCost)}` : 'Complimentary' %></span></div>
         <div class="checkout-total-row"><span>Estimated tax · 20%</span><span>€<%= formatPrice(tax) %></span></div>
         <div class="checkout-grand-total"><strong>Total</strong><strong>€<%= formatPrice(total) %></strong></div>
-        <% if (error) { %><button class="place-order-button" type="submit" disabled>Review your bag to continue</button><% } else { %><button class="place-order-button" type="submit">Place order <i class="bi bi-arrow-right"></i></button><% } %>
-        <p class="checkout-terms-note">Placing this order records a pending mock payment. No payment will be collected.</p>
+        <% if (error) { %><button class="place-order-button" type="submit" disabled>Review your bag to continue</button><% } else { %><button class="place-order-button" type="submit">Continue to order summary <i class="bi bi-arrow-right"></i></button><% } %>
+        <p class="checkout-terms-note">Choose online payment or Cash on Delivery. Your order total is calculated securely from your bag.</p>
         <a class="checkout-back-link" href="/cart"><i class="bi bi-arrow-left"></i> Return to your bag</a>
       </aside>
     </form>

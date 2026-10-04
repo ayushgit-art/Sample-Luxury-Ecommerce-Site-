@@ -2,23 +2,40 @@ const mongoose = require('mongoose');
 const CartItem = require('../models/CartItem');
 const Product = require('../models/Product');
 
+const SHIPPING_THRESHOLD = 500;
+const SHIPPING_COST = 12;
+const TAX_RATE = 0.2;
+
 function validOption(value, options) {
   if (!options.length) return value === '';
   return options.includes(value);
 }
 
 function getUnitPrice(product) {
-  return product.discountPrice || product.price;
+  return product.discountPrice == null ? product.price : product.discountPrice;
+}
+
+function getTotals(subtotal) {
+  const roundedSubtotal = Math.round((subtotal + Number.EPSILON) * 100) / 100;
+  const shippingCost = roundedSubtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const tax = Math.round((roundedSubtotal * TAX_RATE + Number.EPSILON) * 100) / 100;
+  return {
+    subtotal: roundedSubtotal,
+    shippingCost,
+    tax,
+    total: Math.round((roundedSubtotal + shippingCost + tax + Number.EPSILON) * 100) / 100
+  };
 }
 
 async function getCartSummary(userId) {
   const rows = await CartItem.find({ user: userId }).populate('product', 'price discountPrice').lean();
-  return rows.reduce((summary, row) => {
-    if (!row.product) return summary;
-    summary.cartCount += row.quantity;
-    summary.subtotal += getUnitPrice(row.product) * row.quantity;
-    return summary;
+  const summary = rows.reduce((total, row) => {
+    if (!row.product) return total;
+    total.cartCount += row.quantity;
+    total.subtotal += getUnitPrice(row.product) * row.quantity;
+    return total;
   }, { cartCount: 0, subtotal: 0 });
+  return { cartCount: summary.cartCount, ...getTotals(summary.subtotal) };
 }
 
 function getRequestedOptions(body) {
@@ -38,11 +55,14 @@ async function renderCart(req, res, next) {
     const availableItems = cartItems.filter((item) => item.product);
     const cartCount = availableItems.reduce((total, item) => total + item.quantity, 0);
     const subtotal = availableItems.reduce((total, item) => total + getUnitPrice(item.product) * item.quantity, 0);
+    const totals = getTotals(subtotal);
+    const stockIssue = availableItems.some((item) => item.quantity > item.product.stock);
     res.render('cart', {
       title: 'Your bag | Maison Atelier',
       cartItems: availableItems,
       cartCount,
-      subtotal,
+      stockIssue,
+      ...totals,
       formatPrice: (price) => Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     });
   } catch (error) {
@@ -149,7 +169,7 @@ async function removeCartItem(req, res, next) {
 async function clearCart(req, res, next) {
   try {
     await CartItem.deleteMany({ user: req.session.userId });
-    res.json({ cartCount: 0, subtotal: 0 });
+    res.json(await getCartSummary(req.session.userId));
   } catch (error) {
     next(error);
   }

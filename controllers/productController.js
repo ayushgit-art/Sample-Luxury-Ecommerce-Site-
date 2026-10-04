@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
+const Order = require('../models/Order');
+const Review = require('../models/Review');
 const sampleProducts = require('../data/products');
+const { attachReviewStats } = require('../services/reviewStats');
 
 const PAGE_SIZE = 6;
 const categories = ['Shoes', 'Clothing', 'Bags', 'Accessories'];
@@ -75,6 +78,7 @@ async function renderCollection(req, res, next) {
       pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
       currentPage = Math.min(requestedPage, pageCount);
       products = await Product.find(filter).sort(sort).skip((currentPage - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean();
+      products = await attachReviewStats(products);
     } else {
       const matchingProducts = sortSampleProducts(filterSampleProducts(filter), sortName);
       total = matchingProducts.length;
@@ -112,10 +116,36 @@ async function renderProductDetail(req, res, next) {
   try {
     let product;
     let relatedProducts;
+    let reviews = [];
+    let eligibleOrders = [];
+    let ownReviews = [];
+    let averageRating = 0;
     if (mongoose.connection.readyState === 1) {
       product = await Product.findOne({ slug: req.params.slug }).lean();
       if (product) {
-        relatedProducts = await Product.find({ category: product.category, slug: { $ne: product.slug } }).limit(4).lean();
+        [relatedProducts, reviews] = await Promise.all([
+          Product.find({ category: product.category, slug: { $ne: product.slug } }).limit(4).lean(),
+          Review.find({ product: product._id, isRemoved: { $ne: true } }).populate('user', 'name').sort({ createdAt: -1 }).lean()
+        ]);
+        relatedProducts = await attachReviewStats(relatedProducts);
+        averageRating = reviews.length
+          ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+          : 0;
+        if (req.session.userId) {
+          const [userReviews, purchasedOrders] = await Promise.all([
+            Review.find({ product: product._id, user: req.session.userId }).select('order isRemoved').lean(),
+            Order.find({
+              user: req.session.userId,
+              'items.product': product._id,
+              orderStatus: { $in: ['confirmed', 'processing', 'packed', 'shipped', 'delivered'] },
+              $or: [{ paymentMethod: 'cod' }, { paymentStatus: 'paid' }]
+            }).select('_id createdAt').sort({ createdAt: -1 }).lean()
+          ]);
+          ownReviews = reviews.filter((review) => String(review.user?._id) === String(req.session.userId));
+          const alreadyReviewed = new Set(userReviews.map((review) => String(review.order)));
+          eligibleOrders = purchasedOrders.filter((order) => !alreadyReviewed.has(String(order._id))
+            || ownReviews.some((review) => String(review.order) === String(order._id)));
+        }
       }
     } else {
       product = sampleProducts.find((item) => item.slug === req.params.slug);
@@ -125,11 +155,17 @@ async function renderProductDetail(req, res, next) {
     }
 
     if (!product) return res.status(404).render('404', { title: 'Piece not found | Maison Atelier' });
+    product.averageRating = averageRating;
+    product.reviewCount = reviews.length;
     res.render('product-detail', {
       title: `${product.name} | Maison Atelier`,
       product,
       relatedProducts,
-      reviews: []
+      reviews,
+      ownReviews,
+      eligibleOrders,
+      reviewError: req.query.reviewError || '',
+      reviewNotice: req.query.reviewNotice || ''
     });
   } catch (error) {
     next(error);

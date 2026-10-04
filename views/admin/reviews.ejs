@@ -1,0 +1,17 @@
+<%- include('../partials/header', { title }) %>
+<main class="admin-page container-fluid">
+  <header class="admin-heading"><div><p class="eyebrow">Maison Atelier · Administration</p><h1>Reviews</h1></div></header>
+  <%- include('_nav') %>
+  <% if (reviews.length) { %>
+    <div class="admin-review-list">
+      <% reviews.forEach((review) => { %>
+        <article class="admin-review">
+          <div><strong><%= review.product ? review.product.name : 'Product removed' %></strong><p><%= review.reviewerName %> · <%= review.rating %>/5 · <%= new Date(review.createdAt).toLocaleDateString('en-GB') %></p></div>
+          <p><%= review.body %></p>
+          <form action="/admin/reviews/<%= review._id %>/delete" method="post" data-confirm-review-delete><button type="submit">Remove review</button></form>
+        </article>
+      <% }) %>
+    </div>
+  <% } else { %><p class="admin-empty-note">No customer reviews have been submitted.</p><% } %>
+</main>
+<%- include('../partials/footer') %>

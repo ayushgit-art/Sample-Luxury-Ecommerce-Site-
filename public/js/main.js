@@ -85,9 +85,14 @@ if (cartPage) {
   const refreshSummary = (result) => {
     updateBagCount(result.cartCount);
     const subtotal = money(result.subtotal);
-    cartPage.querySelectorAll('[data-cart-subtotal], [data-cart-total]').forEach((element) => {
-      element.textContent = subtotal;
-    });
+    const total = cartPage.querySelector('[data-cart-subtotal]');
+    const grandTotal = cartPage.querySelector('[data-cart-total]');
+    const shipping = cartPage.querySelector('[data-cart-shipping]');
+    const tax = cartPage.querySelector('[data-cart-tax]');
+    if (total) total.textContent = subtotal;
+    if (grandTotal) grandTotal.textContent = money(result.total);
+    if (shipping) shipping.textContent = result.shippingCost ? money(result.shippingCost) : 'Complimentary';
+    if (tax) tax.textContent = money(result.tax);
     const itemCount = cartPage.querySelector('[data-cart-item-count]');
     if (itemCount) itemCount.textContent = String(result.cartCount);
   };
@@ -261,6 +266,18 @@ document.querySelectorAll('[data-newsletter-form]').forEach((newsletterForm) => 
 document.querySelectorAll('[data-confirm-delete]').forEach((form) => {
   form.addEventListener('submit', (event) => {
     if (!window.confirm('Delete this product? This cannot be undone.')) event.preventDefault();
+  });
+});
+
+document.querySelectorAll('[data-confirm-review-delete]').forEach((form) => {
+  form.addEventListener('submit', (event) => {
+    if (!window.confirm('Remove this customer review?')) event.preventDefault();
+  });
+});
+
+document.querySelectorAll('[data-confirm-order-cancel]').forEach((form) => {
+  form.addEventListener('submit', (event) => {
+    if (!window.confirm('Cancel this order? This cannot be undone.')) event.preventDefault();
   });
 });
 

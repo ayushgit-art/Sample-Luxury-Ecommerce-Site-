@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const sampleProducts = require('../data/products');
+const { attachReviewStats } = require('../services/reviewStats');
 
 async function renderHome(_req, res, next) {
   try {
@@ -10,6 +11,10 @@ async function renderHome(_req, res, next) {
       [newArrivals, featuredProducts] = await Promise.all([
         Product.find().sort({ createdAt: -1 }).limit(6).lean(),
         Product.find({ featured: true }).sort({ createdAt: -1 }).limit(4).lean()
+      ]);
+      [newArrivals, featuredProducts] = await Promise.all([
+        attachReviewStats(newArrivals),
+        attachReviewStats(featuredProducts)
       ]);
     } else {
       newArrivals = sampleProducts.slice(0, 6);

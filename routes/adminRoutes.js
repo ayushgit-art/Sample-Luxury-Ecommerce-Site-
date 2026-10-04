@@ -14,6 +14,8 @@ router.post('/products/:id/delete', admin.deleteProduct);
 router.get('/orders', admin.renderOrders);
 router.get('/orders/:id', admin.renderOrder);
 router.post('/orders/:id/status', admin.updateOrderStatus);
+router.get('/reviews', admin.renderReviews);
+router.post('/reviews/:reviewId/delete', admin.deleteReview);
 router.get('/users', admin.renderUsers);
 
 module.exports = router;

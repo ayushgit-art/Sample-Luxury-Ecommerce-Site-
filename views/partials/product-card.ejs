@@ -13,6 +13,7 @@
     <div class="product-copy">
       <p class="product-category"><%= product.category %></p>
       <h3><a href="/products/<%= product.slug %>"><%= product.name %></a></h3>
+      <% if (product.reviewCount) { %><p class="product-rating" aria-label="<%= product.averageRating.toFixed(1) %> out of 5 from <%= product.reviewCount %> reviews"><span aria-hidden="true">★</span> <%= product.averageRating.toFixed(1) %> <small>(<%= product.reviewCount %>)</small></p><% } %>
       <% if (product.colors && product.colors.length) { %><p class="product-color"><%= product.colors.join(' · ') %></p><% } %>
     </div>
     <div class="product-actions">
