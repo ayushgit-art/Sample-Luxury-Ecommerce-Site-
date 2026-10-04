@@ -18,7 +18,11 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+	setHeaders(res, filePath) {
+		if (path.extname(filePath).toLowerCase() === '.avif') res.setHeader('Content-Type', 'image/avif');
+	}
+}));
 app.use(createSessionMiddleware());
 app.use((req, res, next) => {
 	res.locals.currentUser = req.session.userId ? { email: req.session.userEmail, role: req.session.userRole } : null;

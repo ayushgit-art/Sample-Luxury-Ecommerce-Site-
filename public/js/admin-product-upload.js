@@ -6,7 +6,7 @@ if (upload) {
   const dropzone = upload.querySelector('[data-image-dropzone]');
   const previews = upload.querySelector('[data-image-previews]');
   const status = upload.querySelector('[data-image-upload-status]');
-  const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
   const maximumFileSize = 5 * 1024 * 1024;
   const maximumFiles = 8;
   let selectedFiles = [];
@@ -53,7 +53,7 @@ if (upload) {
     for (const file of files) {
       if (!allowedTypes.has(file.type) || file.size > maximumFileSize) {
         syncInputFiles();
-        status.textContent = 'Choose JPEG, PNG, or WebP images no larger than 5 MB each.';
+        status.textContent = 'Choose JPEG, PNG, WebP, or AVIF images no larger than 5 MB each.';
         return;
       }
     }

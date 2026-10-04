@@ -9,7 +9,7 @@ router.get('/products', admin.renderProducts);
 router.get('/products/new', admin.renderNewProduct);
 router.post('/products', admin.uploadProductImages, admin.createProduct);
 router.get('/products/:id/edit', admin.renderEditProduct);
-router.post('/products/:id', admin.updateProduct);
+router.post('/products/:id', admin.uploadEditProductImages, admin.updateProduct);
 router.post('/products/:id/delete', admin.deleteProduct);
 router.get('/orders', admin.renderOrders);
 router.get('/orders/:id', admin.renderOrder);

@@ -21,10 +21,10 @@ async function renderHome(_req, res, next) {
       newArrivals,
       featuredProducts,
       categories: [
-        { name: 'Shoes', note: 'Considered from every angle', image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1100&q=85', href: '/products?category=Shoes' },
-        { name: 'Clothing', note: 'A quieter kind of statement', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1100&q=85', href: '/products?category=Clothing' },
-        { name: 'Bags', note: 'Made to move with you', image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1100&q=85', href: '/products?category=Bags' },
-        { name: 'Accessories', note: 'The finishing touch', image: 'https://images.unsplash.com/photo-1624222247344-550fb8c9b5b9?auto=format&fit=crop&w=1100&q=85', href: '/products?category=Accessories' }
+        { name: 'Shoes', note: 'Considered from every angle', image: '/images/Cardimages/leathermule.avif', href: '/products?category=Shoes' },
+        { name: 'Clothing', note: 'A quieter kind of statement', image: '/images/Cardimages/shirt.avif', href: '/products?category=Clothing' },
+        { name: 'Bags', note: 'Made to move with you', image: '/images/Cardimages/redbag.avif', href: '/products?category=Bags' },
+        { name: 'Accessories', note: 'The finishing touch', image: '/images/Cardimages/photo-1752386268324-0533ffbfbc0e.avif', href: '/products?category=Accessories' }
       ]
     });
   } catch (error) {

@@ -2,7 +2,6 @@
   <div class="product-image-wrap">
     <a class="product-image-link" href="/products/<%= product.slug %>" aria-label="View <%= product.name %>">
       <img class="product-image" src="<%= product.images ? product.images[0] : product.image %>" alt="<%= product.imageAlt || product.name %>" loading="lazy">
-      <% if (product.images && product.images[1]) { %><img class="product-image product-image-alt" src="<%= product.images[1] %>" alt="" loading="lazy"><% } %>
     </a>
     <% if (product.isNew || product.newArrival) { %><span class="product-badge">New season</span><% } %>
     <div class="product-card-tools">
