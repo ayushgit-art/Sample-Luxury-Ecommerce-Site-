@@ -7,7 +7,7 @@ router.use(requireAdmin);
 router.get('/', admin.renderDashboard);
 router.get('/products', admin.renderProducts);
 router.get('/products/new', admin.renderNewProduct);
-router.post('/products', admin.createProduct);
+router.post('/products', admin.uploadProductImages, admin.createProduct);
 router.get('/products/:id/edit', admin.renderEditProduct);
 router.post('/products/:id', admin.updateProduct);
 router.post('/products/:id/delete', admin.deleteProduct);

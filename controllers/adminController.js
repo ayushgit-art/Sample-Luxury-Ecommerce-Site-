@@ -1,4 +1,8 @@
+const crypto = require('node:crypto');
+const fs = require('node:fs/promises');
 const mongoose = require('mongoose');
+const multer = require('multer');
+const path = require('node:path');
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
@@ -6,6 +10,18 @@ const User = require('../models/User');
 
 const orderStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 const maximumImageCount = 8;
+const maximumImageSize = 5 * 1024 * 1024;
+const productImageDirectory = path.join(__dirname, '..', 'uploads', 'products');
+const parseProductImageUploads = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: maximumImageSize, files: maximumImageCount, fields: 24, fieldSize: 16000, parts: 40 },
+  fileFilter(_req, file, callback) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      return callback(new Error('Upload JPEG, PNG, or WebP images only.'));
+    }
+    callback(null, true);
+  }
+}).array('images', maximumImageCount);
 
 function slugify(value) {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -22,7 +38,14 @@ function parseImageUrls(value) {
   return [...new Set(value.split(/[\r\n]+/).map((image) => image.trim()).filter(Boolean))];
 }
 
-function parseProductInput(body) {
+function imageExtension(buffer) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return '.jpg';
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return '.png';
+  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return '.webp';
+  return null;
+}
+
+function parseProductInput(body, uploadedImages = []) {
   const name = String(body.name || '').trim();
   const slug = slugify(String(body.slug || name).trim());
   const category = String(body.category || '').trim();
@@ -35,7 +58,7 @@ function parseProductInput(body) {
   const discountPrice = discountText ? Number(discountText) : null;
   const sizes = parseList(body.sizes);
   const colors = parseList(body.colors);
-  const images = parseImageUrls(body.images);
+  const images = uploadedImages.length ? uploadedImages : parseImageUrls(body.images);
   const errors = [];
 
   if (name.length < 2 || name.length > 120) errors.push('Product name must be between 2 and 120 characters.');
@@ -51,8 +74,9 @@ function parseProductInput(body) {
   }
   if (sizes.length > 40 || sizes.some((size) => size.length > 32)) errors.push('Check the size list; each size must be 32 characters or fewer.');
   if (colors.length > 40 || colors.some((color) => color.length > 48)) errors.push('Check the color list; each color must be 48 characters or fewer.');
-  if (!images.length || images.length > maximumImageCount) errors.push(`Provide between 1 and ${maximumImageCount} image URLs.`);
+  if (!images.length || images.length > maximumImageCount) errors.push(`Provide between 1 and ${maximumImageCount} product images.`);
   if (images.some((image) => image.length > 2048 || (() => {
+    if (/^\/uploads\/products\/[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(image)) return false;
     try {
       const url = new URL(image);
       return !['http:', 'https:'].includes(url.protocol);
@@ -100,6 +124,58 @@ function parseProductInput(body) {
 
 function renderProductForm(res, { title, values, error = null, status = 200, productId = null }) {
   return res.status(status).render('admin/product-form', { title, values, error, productId });
+}
+
+async function removeUploadedImages(images) {
+  await Promise.all(images.map((image) => fs.rm(path.join(productImageDirectory, path.basename(image)), { force: true })));
+}
+
+function uploadProductImages(req, res, next) {
+  parseProductImageUploads(req, res, async (uploadError) => {
+    if (uploadError) {
+      const message = uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Each image must be 5 MB or smaller.'
+        : uploadError.code === 'LIMIT_FILE_COUNT' || uploadError.code === 'LIMIT_UNEXPECTED_FILE'
+          ? `Upload no more than ${maximumImageCount} images.`
+          : uploadError.message;
+      return renderProductForm(res, {
+        title: 'Add product | Maison Atelier Admin',
+        values: req.body || {},
+        error: message,
+        status: 422
+      });
+    }
+
+    const files = req.files || [];
+    const extensions = files.map((file) => imageExtension(file.buffer));
+    if (extensions.some((extension) => !extension)) {
+      return renderProductForm(res, {
+        title: 'Add product | Maison Atelier Admin',
+        values: req.body || {},
+        error: 'Upload valid JPEG, PNG, or WebP image files.',
+        status: 422
+      });
+    }
+
+    const savedImages = [];
+    try {
+      await fs.mkdir(productImageDirectory, { recursive: true });
+      for (let index = 0; index < files.length; index += 1) {
+        const filename = `${crypto.randomUUID()}${extensions[index]}`;
+        savedImages.push(`/uploads/products/${filename}`);
+        await fs.writeFile(path.join(productImageDirectory, filename), files[index].buffer, { flag: 'wx', mode: 0o644 });
+      }
+      req.uploadedProductImages = savedImages;
+      next();
+    } catch (error) {
+      try {
+        await removeUploadedImages(savedImages);
+      } catch (cleanupError) {
+        return next(new AggregateError([error, cleanupError], 'Unable to save or clean up uploaded product images.'));
+      }
+      next(error);
+    }
+  });
 }
 
 async function renderDashboard(_req, res, next) {
@@ -151,17 +227,25 @@ function renderNewProduct(_req, res) {
 }
 
 async function createProduct(req, res, next) {
-  const parsed = parseProductInput(req.body);
-  if (parsed.errors.length) {
-    return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parsed.values, error: parsed.errors.join(' ') , status: 422 });
-  }
+  const uploadedImages = req.uploadedProductImages || [];
 
   try {
+    const parsed = parseProductInput(req.body, uploadedImages);
+    if (parsed.errors.length) {
+      await removeUploadedImages(uploadedImages);
+      return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parsed.values, error: parsed.errors.join(' '), status: 422 });
+    }
+
     await Product.create(parsed.product);
     res.redirect('/admin/products?notice=created');
   } catch (error) {
+    try {
+      await removeUploadedImages(uploadedImages);
+    } catch (cleanupError) {
+      return next(new AggregateError([error, cleanupError], 'Unable to create the product or clean up its uploaded images.'));
+    }
     if (error.code === 11000) {
-      return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parsed.values, error: 'A product already uses this slug.', status: 409 });
+      return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parseProductInput(req.body, uploadedImages).values, error: 'A product already uses this slug.', status: 409 });
     }
     next(error);
   }
@@ -283,6 +367,7 @@ module.exports = {
   renderDashboard,
   renderProducts,
   renderNewProduct,
+  uploadProductImages,
   createProduct,
   renderEditProduct,
   updateProduct,

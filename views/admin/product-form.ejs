@@ -3,7 +3,7 @@
   <header class="admin-heading"><div><p class="eyebrow">Maison Atelier · Product management</p><h1><%= productId ? 'Edit product' : 'Add product' %></h1></div><a class="admin-inline-link" href="/admin/products"><i class="bi bi-arrow-left"></i> All products</a></header>
   <%- include('_nav') %>
   <% if (error) { %><p class="admin-form-error" role="alert"><%= error %></p><% } %>
-  <form class="admin-product-form" action="<%= productId ? `/admin/products/${productId}` : '/admin/products' %>" method="post">
+  <form class="admin-product-form" action="<%= productId ? `/admin/products/${productId}` : '/admin/products' %>" method="post" enctype="<%= productId ? 'application/x-www-form-urlencoded' : 'multipart/form-data' %>">
     <div class="admin-form-grid">
       <label>Product name<input name="name" value="<%= values.name || '' %>" maxlength="120" required></label>
       <label>Slug<input name="slug" value="<%= values.slug || '' %>" maxlength="120" placeholder="Generated from name when blank"></label>
@@ -16,11 +16,25 @@
       <label class="admin-full-width">Description<textarea name="description" rows="5" maxlength="5000" required><%= values.description || '' %></textarea></label>
       <label>Sizes <small>Comma or line separated</small><textarea name="sizes" rows="3"><%= values.sizesText || '' %></textarea></label>
       <label>Colors <small>Comma or line separated</small><textarea name="colors" rows="3"><%= values.colorsText || '' %></textarea></label>
-      <label class="admin-full-width">Image URLs <small>One HTTP(S) URL per line; uploads are not enabled.</small><textarea name="images" rows="3" required><%= values.imagesText || '' %></textarea></label>
+      <% if (productId) { %>
+        <label class="admin-full-width">Image URLs <small>One HTTP(S) URL or saved upload path per line.</small><textarea name="images" rows="3" required><%= values.imagesText || '' %></textarea></label>
+      <% } else { %>
+        <div class="admin-full-width admin-image-upload" data-product-image-upload>
+          <p class="admin-image-upload-label">Product images <small>JPEG, PNG, or WebP · up to 5 MB each · maximum 8 images</small></p>
+          <input class="admin-image-input" id="product-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple tabindex="-1" aria-hidden="true">
+          <button class="admin-image-dropzone" type="button" data-image-dropzone aria-controls="product-images">
+            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+            <span>Drop images here or <u>browse files</u></span>
+          </button>
+          <p class="admin-image-upload-status" data-image-upload-status aria-live="polite">No images selected.</p>
+          <div class="admin-image-previews" data-image-previews></div>
+        </div>
+      <% } %>
       <label class="admin-check"><input type="checkbox" name="featured" <%= values.featured ? 'checked' : '' %>> Featured</label>
       <label class="admin-check"><input type="checkbox" name="newArrival" <%= values.newArrival ? 'checked' : '' %>> New arrival</label>
     </div>
     <div class="admin-form-actions"><button class="admin-primary-link" type="submit"><%= productId ? 'Save product' : 'Create product' %></button><a href="/admin/products">Cancel</a></div>
   </form>
 </main>
+<% if (!productId) { %><script src="/js/admin-product-upload.js" defer></script><% } %>
 <%- include('../partials/footer') %>
