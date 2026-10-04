@@ -1,8 +1,6 @@
 const crypto = require('node:crypto');
-const fs = require('node:fs/promises');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const path = require('node:path');
 const { uploadProductImage, deleteProductImage } = require('../config/cloudinary');
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
@@ -15,7 +13,6 @@ const { cancelCustomerOrder } = require('../services/orderCancellation');
 const orderStatuses = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'delivered', 'cancelled'];
 const maximumImageCount = 8;
 const maximumImageSize = 5 * 1024 * 1024;
-const productImageDirectory = path.join(__dirname, '..', 'uploads', 'products');
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const parseEditProductImageUploads = multer({
   storage: multer.memoryStorage(),
@@ -149,8 +146,20 @@ function renderProductForm(res, { title, values, error = null, status = 200, pro
   return res.status(status).render('admin/product-form', { title, values, error, productId });
 }
 
-async function removeUploadedImages(images) {
-  await Promise.all(images.map((image) => fs.rm(path.join(productImageDirectory, path.basename(image)), { force: true })));
+function makeProductImagePublicId(product, imagePosition, buffer) {
+  const safeSlug = String(product.slug || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100) || 'product';
+  const contentHash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+  return `${safeSlug}-${product._id}-${imagePosition}-${contentHash}`;
+}
+
+async function cleanupCloudinaryImages(images) {
+  await Promise.all(images.filter((image) => !image.reused).map((image) => deleteProductImage(image.publicId)));
 }
 
 function uploadProductImages(req, res, next) {
@@ -170,34 +179,16 @@ function uploadProductImages(req, res, next) {
     }
 
     const files = req.files || [];
-    const extensions = files.map((file) => imageExtension(file.buffer));
-    if (extensions.some((extension) => !extension)) {
+    if (files.some((file) => !imageExtension(file.buffer))) {
       return renderProductForm(res, {
         title: 'Add product | Maison Atelier Admin',
         values: req.body || {},
-        error: 'Upload valid JPEG, PNG, or WebP image files.',
+        error: 'Upload valid JPEG, PNG, WebP, or AVIF image files.',
         status: 422
       });
     }
 
-    const savedImages = [];
-    try {
-      await fs.mkdir(productImageDirectory, { recursive: true });
-      for (let index = 0; index < files.length; index += 1) {
-        const filename = `${crypto.randomUUID()}${extensions[index]}`;
-        savedImages.push(`/uploads/products/${filename}`);
-        await fs.writeFile(path.join(productImageDirectory, filename), files[index].buffer, { flag: 'wx', mode: 0o644 });
-      }
-      req.uploadedProductImages = savedImages;
-      next();
-    } catch (error) {
-      try {
-        await removeUploadedImages(savedImages);
-      } catch (cleanupError) {
-        return next(new AggregateError([error, cleanupError], 'Unable to save or clean up uploaded product images.'));
-      }
-      next(error);
-    }
+    next();
   });
 }
 
@@ -282,25 +273,61 @@ function renderNewProduct(_req, res) {
 }
 
 async function createProduct(req, res, next) {
-  const uploadedImages = req.uploadedProductImages || [];
+  const files = req.files || [];
+  const parsed = parseProductInput(req.body || {}, [], { allowEmptyImages: true });
+  const imageUrls = [...parsed.product.images];
+  if (!files.length && !imageUrls.length) parsed.errors.push(`Provide between 1 and ${maximumImageCount} product images.`);
+  if (files.length + imageUrls.length > maximumImageCount) parsed.errors.push(`Provide no more than ${maximumImageCount} product images.`);
+  if (parsed.errors.length) {
+    return renderProductForm(res, {
+      title: 'Add product | Maison Atelier Admin',
+      values: { ...parsed.values, imagesText: imageUrls.join('\n') },
+      error: parsed.errors.join(' '),
+      status: 422
+    });
+  }
 
+  const uploadedImages = [];
+  let cloudinaryUploadInProgress = false;
   try {
-    const parsed = parseProductInput(req.body, uploadedImages);
-    if (parsed.errors.length) {
-      await removeUploadedImages(uploadedImages);
-      return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parsed.values, error: parsed.errors.join(' '), status: 422 });
+    const product = new Product(parsed.product);
+    for (let index = 0; index < files.length; index += 1) {
+      cloudinaryUploadInProgress = true;
+      const image = await uploadProductImage(
+        files[index].buffer,
+        makeProductImagePublicId(product, imageUrls.length + index + 1, files[index].buffer)
+      );
+      uploadedImages.push(image);
+      imageUrls.push(image.url);
     }
 
-    await Product.create(parsed.product);
+    cloudinaryUploadInProgress = false;
+    product.images = imageUrls;
+    await product.save();
     res.redirect('/admin/products?notice=created');
   } catch (error) {
     try {
-      await removeUploadedImages(uploadedImages);
+      await cleanupCloudinaryImages(uploadedImages);
     } catch (cleanupError) {
-      return next(new AggregateError([error, cleanupError], 'Unable to create the product or clean up its uploaded images.'));
+      return next(new AggregateError([error, cleanupError], 'Unable to create the product or clean up its new Cloudinary images.'));
     }
     if (error.code === 11000) {
-      return renderProductForm(res, { title: 'Add product | Maison Atelier Admin', values: parseProductInput(req.body, uploadedImages).values, error: 'A product already uses this slug.', status: 409 });
+      return renderProductForm(res, {
+        title: 'Add product | Maison Atelier Admin',
+        values: { ...parsed.values, imagesText: imageUrls.join('\n') },
+        error: 'A product already uses this slug.',
+        status: 409
+      });
+    }
+    if (cloudinaryUploadInProgress) {
+      return renderProductForm(res, {
+        title: 'Add product | Maison Atelier Admin',
+        values: { ...parsed.values, imagesText: parsed.product.images.join('\n') },
+        error: error.message?.startsWith('Set CLOUDINARY_')
+          ? error.message
+          : 'Unable to upload one or more images to Cloudinary. No product was created; please try again.',
+        status: error.message?.startsWith('Set CLOUDINARY_') ? 503 : 502
+      });
     }
     next(error);
   }
@@ -338,12 +365,21 @@ async function updateProduct(req, res, next) {
   }
 
   const uploadedImages = [];
+  let cloudinaryUploadInProgress = false;
   try {
-    const existingProduct = await Product.findById(req.params.id).select('_id').lean();
+    const existingProduct = await Product.findById(req.params.id).select('_id slug').lean();
     if (!existingProduct) return res.status(404).render('404', { title: 'Product not found | Maison Atelier' });
 
     for (let index = 0; index < files.length; index += 1) {
-      const image = await uploadProductImage(files[index].buffer, crypto.randomUUID());
+      cloudinaryUploadInProgress = true;
+      const image = await uploadProductImage(
+        files[index].buffer,
+        makeProductImagePublicId(
+          { _id: existingProduct._id, slug: parsed.product.slug },
+          index + 1,
+          files[index].buffer
+        )
+      );
       uploadedImages.push(image);
     }
 
@@ -353,6 +389,7 @@ async function updateProduct(req, res, next) {
       else images.push(image.url);
     });
     parsed.product.images = images;
+    cloudinaryUploadInProgress = false;
     const updatedProduct = await Product.findByIdAndUpdate(req.params.id, { $set: parsed.product }, { new: true, runValidators: true });
     if (!updatedProduct) {
       const missingProductError = new Error('Product not found.');
@@ -362,7 +399,7 @@ async function updateProduct(req, res, next) {
     res.redirect('/admin/products?notice=updated');
   } catch (error) {
     try {
-      await Promise.all(uploadedImages.map((image) => deleteProductImage(image.publicId)));
+      await cleanupCloudinaryImages(uploadedImages);
     } catch (cleanupError) {
       return next(new AggregateError([error, cleanupError], 'Unable to update the product or clean up its Cloudinary images.'));
     }
@@ -370,8 +407,16 @@ async function updateProduct(req, res, next) {
       return renderProductForm(res, { title: 'Edit product | Maison Atelier Admin', productId: req.params.id, values: parsed.values, error: 'A product already uses this slug.', status: 409 });
     }
     if (error.code === 'PRODUCT_NOT_FOUND') return res.status(404).render('404', { title: 'Product not found | Maison Atelier' });
-    if (error.message?.startsWith('Set CLOUDINARY_')) {
-      return renderProductForm(res, { title: 'Edit product | Maison Atelier Admin', productId: req.params.id, values: parsed.values, error: error.message, status: 503 });
+    if (cloudinaryUploadInProgress) {
+      return renderProductForm(res, {
+        title: 'Edit product | Maison Atelier Admin',
+        productId: req.params.id,
+        values: parsed.values,
+        error: error.message?.startsWith('Set CLOUDINARY_')
+          ? error.message
+          : 'Unable to upload one or more images to Cloudinary. Product images were not changed; please try again.',
+        status: error.message?.startsWith('Set CLOUDINARY_') ? 503 : 502
+      });
     }
     next(error);
   }

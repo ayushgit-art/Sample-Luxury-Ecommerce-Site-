@@ -16,26 +16,58 @@ function getConfiguredCloudinary() {
   return cloudinary;
 }
 
-function uploadProductImage(buffer, publicId) {
+function secureProductImageUrl(result) {
+  let imageUrl;
+  try {
+    imageUrl = new URL(result?.secure_url);
+  } catch (_error) {
+    throw new Error('Cloudinary did not return a secure product image URL.');
+  }
+  if (imageUrl.protocol !== 'https:' || imageUrl.hostname !== 'res.cloudinary.com' || !result.public_id) {
+    throw new Error('Cloudinary did not return a secure product image URL.');
+  }
+  return imageUrl.toString();
+}
+
+async function findProductImage(configuredCloudinary, publicId) {
+  try {
+    const result = await configuredCloudinary.api.resource(`maison-atelier/products/${publicId}`, {
+      resource_type: 'image'
+    });
+    return secureProductImageUrl(result);
+  } catch (error) {
+    const cloudinaryError = error?.error || error;
+    if (cloudinaryError?.http_code === 404) return null;
+    throw cloudinaryError;
+  }
+}
+
+async function uploadProductImage(buffer, publicId) {
   const configuredCloudinary = getConfiguredCloudinary();
+  const existingUrl = await findProductImage(configuredCloudinary, publicId);
+  if (existingUrl) return { url: existingUrl, publicId, reused: true };
 
   return new Promise((resolve, reject) => {
     const upload = configuredCloudinary.uploader.upload_stream({
       folder: 'maison-atelier/products',
       public_id: publicId,
-      resource_type: 'image'
-    }, (error, result) => {
-      if (error) return reject(error);
-      let imageUrl;
+      resource_type: 'image',
+      overwrite: false
+    }, async (error, result) => {
+      if (error) {
+        try {
+          const existing = await findProductImage(configuredCloudinary, publicId);
+          if (existing) return resolve({ url: existing, publicId, reused: true });
+        } catch (lookupError) {
+          return reject(new AggregateError([error, lookupError], 'Cloudinary upload failed and its asset could not be checked.'));
+        }
+        return reject(error);
+      }
       try {
-        imageUrl = new URL(result?.secure_url);
-      } catch (_error) {
-        return reject(new Error('Cloudinary did not return a secure product image URL.'));
+        resolve({ url: secureProductImageUrl(result), publicId: result.public_id, reused: false });
+      } catch (validationError) {
+        reject(validationError);
       }
-      if (imageUrl.protocol !== 'https:' || !result.public_id) {
-        return reject(new Error('Cloudinary did not return a secure product image URL.'));
-      }
-      resolve({ url: result.secure_url, publicId: result.public_id });
     });
 
     upload.on('error', reject);
