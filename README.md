@@ -1,6 +1,6 @@
 # 🏛️ Maison Atelier — Luxury Fashion E-Commerce Platform
 
-**Maison Atelier** is an editorial, full-stack luxury fashion storefront and atelier management system. Built with Node.js, Express, EJS, and MongoDB, it features dynamic collection filtering, atomic inventory reservations, verified customer reviews, multi-tier checkout with Razorpay and Cash on Delivery, Cloudinary media delivery, and an administrative fulfillment studio.
+**Maison Atelier** is an editorial, full-stack luxury fashion storefront and atelier management system. Built with Node.js, Express, EJS, and MongoDB, it features dynamic collection filtering, atomic inventory reservations, verified customer reviews, seamless Cash on Delivery (COD) checkout, Cloudinary media delivery, and an administrative fulfillment studio.
 
 ---
 
@@ -14,9 +14,9 @@
 
 ### 2. 💳 Smart Cart, Checkout & Orders
 - **Interactive Shopping Bag:** Real-time quantity adjustments, live stock validation, automatic free delivery progress calculation (€500 threshold vs. €12 standard), and 20% VAT computation.
-- **Dual Payment Checkout:** Streamlined delivery address capture supporting both Cash on Delivery (COD) and Online Payment via Razorpay Test Mode.
-- **Resilient Payment Lifecycle:** Razorpay order creation, timing-safe HMAC-SHA256 signature verification (`verifyRazorpaySignature`), payment failure logging, and retry capabilities.
-- **Order Tracking & Self-Service:** Detailed order status tracking (`pending`, `confirmed`, `processing`, `packed`, `shipped`, `delivered`, `cancelled`) with customer self-service order cancellation.
+- **Cash on Delivery (COD) Checkout:** Dedicated COD checkout flow with recipient contact information and multi-line address validation.
+- **Order Tracking & Management:** Detailed order status tracking across seven lifecycle phases (`pending`, `confirmed`, `processing`, `packed`, `shipped`, `delivered`, `cancelled`).
+- **Customer Self-Service:** Safe cancellation workflow allowing customers to cancel eligible unfulfilled orders directly from their order page.
 
 ### 3. 🛡️ Administrative Fulfillment & Governance
 - **Executive Operations Dashboard (`/admin`):** Centralized telemetry tracking store revenue, fulfillment breakdown, inventory alerts, and recent transactions.
@@ -26,7 +26,7 @@
 
 ### 4. ⚡ Core Architecture & Engineering Highlights
 - **Atomic Inventory Engine:** Safe stock reservation system (`reserveOrderStock`) using conditional MongoDB updates (`$inc`) and transactional rollbacks to prevent overselling.
-- **Automated Stock Restoration:** Intelligent cancellation service that automatically restores deducted or reserved inventory when an order is cancelled or payment abandoned.
+- **Automated Stock Restoration:** Intelligent cancellation service that automatically restores deducted inventory when an order is cancelled.
 - **Session-Based RBAC:** Secure cookie sessions stored in MongoDB (`connect-mongo`), bcryptjs (12 rounds) salted hashing, and role-based route middleware (`customer`, `admin`).
 - **Zero-Config Resilience:** Gracefully falls back to bundled sample catalog data and in-memory sessions when running without a MongoDB connection.
 
@@ -39,7 +39,7 @@
 | **Backend & Architecture** | Node.js, Express 4 (MVC architecture), EJS (Embedded JavaScript) |
 | **Database & ODM** | MongoDB, Mongoose 8 (`mongoose`), MongoDB Atlas |
 | **Session & Auth** | `express-session`, `connect-mongo` (MongoDB session store), `bcryptjs` |
-| **Payment Gateway** | Razorpay Node SDK (Orders API, HMAC-SHA256 signature verification) |
+| **Payment Method** | Cash on Delivery (COD) with atomic inventory validation |
 | **Media & Storage** | Cloudinary v2 (`cloudinary`), Multer (Memory Storage) |
 | **Frontend & Styling** | Bootstrap 5, Custom Luxury CSS (`styles.css`), Vanilla JavaScript (ES6+ Fetch API) |
 | **Scripts & Seeding** | CLI Seeds (`seedProducts.js`, `seedAdmins.js`), Cloudinary Migration utility |
@@ -58,13 +58,13 @@ Samplesite/
 ├── public/                     # Static client assets
 │   ├── css/                    # Custom bespoke luxury stylesheet
 │   ├── images/                 # Editorial hero photography & product imagery
-│   └── js/                     # Client scripts (cart AJAX, wishlist, Razorpay checkout)
+│   └── js/                     # Client scripts (cart AJAX, wishlist, checkout UI)
 ├── routes/                     # Express routers (admin, auth, cart, checkout, orders, products, wishlist)
 ├── scripts/                    # Admin seeding, catalog seeding & Cloudinary image migration CLI
-├── services/                   # Atomic inventory engine, order cancellation rollback & Razorpay services
+├── services/                   # Atomic inventory engine & order cancellation rollback services
 ├── views/                      # EJS server-rendered templates & partials
 │   ├── admin/                  # Dashboard, product studio, order fulfillment & review moderation
 │   ├── auth/                   # Customer login & registration views
 │   └── partials/               # Reusable headers, footers, product cards & modals
 ├── app.js                      # Express application assembly & middleware pipeline
-└── server.js                   # HTTP server bootstrap & MongoDB connection entry point 
+└── server.js                   # HTTP server bootstrap & MongoDB connection entry point
